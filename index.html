@@ -154,8 +154,10 @@
       output.innerHTML = "";
 
       let totalBar = 0, totalEC = 0, totalTrinkgeld = 0, totalECTrinkgeld = 0;
+      const totalFahrten = einnahmen.length;
 
       einnahmen.forEach((entry, index) => {
+        const fahrtNummer = totalFahrten - index; // Umkehrung
         totalBar += entry.summe;
         totalEC += entry.ecZahlung;
         totalTrinkgeld += entry.trinkgeld;
@@ -163,6 +165,7 @@
 
         output.innerHTML += `
           <div class="entry" id="entry-${index}">
+            🚕 ${fahrtNummer}. Fahrt<br>
             📅 ${entry.timestamp}<br><hr>
             💵 Bar-Zahlung: ${entry.summe.toFixed(2)}€<br>
             💳 EC-Zahlung: ${entry.ecZahlung.toFixed(2)}€<br><hr>
@@ -174,6 +177,7 @@
 
       output.innerHTML += `
         <div class="summary-box">
+          🚖 Anzahl Fahrten: ${totalFahrten}<br><br>
           💵 Gesamt Bar: ${totalBar.toFixed(2)}€<br>
           💳 Gesamt EC : ${totalEC.toFixed(2)}€<br><hr>
           <center><div class="rahmen">📆 Gesamteinnahmen: ${(totalBar + totalEC).toFixed(2)}€<br><hr>
@@ -267,6 +271,7 @@
       pdf.setFontSize(12);
       pdf.text(`Gesamteinnahmen: ${(totalBar + totalEC).toFixed(2)} €`, 10, yPos);
       pdf.text(`Gesamt-Trinkgeld: ${totalTrinkgeld.toFixed(2)} €`, 10, yPos + 7);
+      pdf.text(`Anzahl der Fahrten: ${einnahmen.length}`, 10, yPos + 14);
 
       pdf.save(`Taxikasse-${fahrername}_${erstellungsdatum}.pdf`);
     }
@@ -277,7 +282,7 @@
       const totalTrinkgeld = einnahmen.reduce((a, e) => a + e.trinkgeld + e.ecTrinkgeld, 0);
       const gesamt = (totalBar + totalEC).toFixed(2);
       const time = new Date().toLocaleString("de-DE");
-      const msg = `📅 ${time}\n📊 Gesamteinnahmen: ${gesamt}€\n💳 EC-Zahlungen: ${totalEC.toFixed(2)}€\n🎁 Trinkgeld: ${totalTrinkgeld.toFixed(2)}€`;
+      const msg = `📅 ${time}\n📊 Gesamteinnahmen: ${gesamt}€\n💳 EC-Zahlungen: ${totalEC.toFixed(2)}€\n🎁 🚖 Fahrten: ${einnahmen.length}`;
       window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
     }
 
@@ -293,4 +298,4 @@
     };
   </script>
 </body>
-</html>
+</html>m
