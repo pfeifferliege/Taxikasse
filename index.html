@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Schichtkasse</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.27/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f8f9fa;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 600px;
+      text-align: center;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    input {
+      width: 80%;
+      padding: 10px;
+      margin: 6px 0;
+      border-radius: 6px;
+      font-size: 16px;
+      border: 1px solid #ddd;
+    }
+    label {
+      display: block;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 6px;
+      font-size: 16px;
+      border: none;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .btn-add { background: #28a745; color: white; }
+    .btn-export { background: #007bff; color: white; }
+    .btn-share { background: #25D366; color: white; }
+    .btn-reset { background: #dc3545; color: white; }
+    .btn-edit { background: #ffc107; color: black; }
+    .btn-save { background: #17a2b8; color: white; }
+    .entry {
+      border: 2px solid #007bff;
+      padding: 12px;
+      border-radius: 6px;
+      margin: 8px 0;
+      background: #e9ecef;
+      text-align: left;
+    }
+    .summary-box {
+      background: #d4edda;
+      padding: 12px;
+      border-radius: 6px;
+      margin: 12px 0;
+      text-align: center;
+      border: 2px solid #28a745;
+      font-weight: bold;
+    }
+    .rahmen {
+      border: 2px solid #ff00ee;
+      padding: 10px;
+      width: fit-content;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>📊 Taxi-Kasse</h2>
+    <input type="text" id="fahrername" placeholder="Fahrername" required oninput="saveFahrername()">
+    <input type="number" id="summe" placeholder="Summe (€)" oninput="calculateRueckgeld()">
+    <input type="number" id="gegeben" placeholder="Gegeben (€)" oninput="calculateRueckgeld()">
+    <input type="number" id="rueckgeld" placeholder="Rückgeld (berechnet)" readonly>
+    <input type="number" id="rueckgeldTats" placeholder="Rückgeld (tatsächlich)" oninput="calculateTrinkgeld()">
+    <input type="number" id="trinkgeld" placeholder="Trinkgeld (€)" readonly>
+    <input type="number" id="ecZahlung" placeholder="EC-Zahlung (€)">
+    <input type="number" id="ecTrinkgeld" placeholder="Trinkgeld bei EC (€)">
+    <button class="btn-add" onclick="addEntry()">➕ Berechnen</button>
+
+    <div id="output"></div>
+
+    <hr>
+    <button class="btn-export" onclick="exportPDF()">📄 PDF speichern</button>
+    <button class="btn-share" onclick="shareWhatsApp()">📱 Teilen via WhatsApp</button>
+    <button class="btn-reset" onclick="resetData()">🗑️ Alle Daten löschen</button>
+  </div>
+
+  <script>
+    let einnahmen = JSON.parse(localStorage.getItem("einnahmen")) || [];
+
+    function saveFahrername() {
+      const name = document.getElementById("fahrername").value.trim();
+      if (name) localStorage.setItem("fahrername", name);
+    }
+
+    function calculateRueckgeld() {
+      const summe = parseFloat(document.getElementById("summe").value) || 0;
+      const gegeben = parseFloat(document.getElementById("gegeben").value) || 0;
+      const rueckgeld = Math.max(gegeben - summe, 0);
+      document.getElementById("rueckgeld").value = rueckgeld.toFixed(2);
+      calculateTrinkgeld();
+    }
+
+    function calculateTrinkgeld() {
+      const rueckgeld = parseFloat(document.getElementById("rueckgeld").value) || 0;
+      const rueckgeldTats = parseFloat(document.getElementById("rueckgeldTats").value) || 0;
+      const trinkgeld = Math.max(rueckgeld - rueckgeldTats, 0);
+      document.getElementById("trinkgeld").value = trinkgeld.toFixed(2);
+    }
+
+    function addEntry() {
+      const summe = parseFloat(document.getElementById("summe").value) || 0;
+      const gegeben = parseFloat(document.getElementById("gegeben").value) || 0;
+      const rueckgeld = parseFloat(document.getElementById("rueckgeld").value) || 0;
+      const rueckgeldTats = parseFloat(document.getElementById("rueckgeldTats").value) || 0;
+      const trinkgeld = parseFloat(document.getElementById("trinkgeld").value) || 0;
+      const ecZahlung = parseFloat(document.getElementById("ecZahlung").value) || 0;
+      const ecTrinkgeld = parseFloat(document.getElementById("ecTrinkgeld").value) || 0;
+      const einnahme = summe + ecZahlung;
+      const timestamp = new Date().toLocaleString("de-DE");
+
+      einnahmen.unshift({ summe, gegeben, rueckgeld, rueckgeldTats, trinkgeld, ecZahlung, ecTrinkgeld, einnahme, timestamp });
+      localStorage.setItem("einnahmen", JSON.stringify(einnahmen));
+
+      document.getElementById("summe").value = "";
+      document.getElementById("gegeben").value = "";
+      document.getElementById("rueckgeld").value = "";
+      document.getElementById("rueckgeldTats").value = "";
+      document.getElementById("trinkgeld").value = "";
+      document.getElementById("ecZahlung").value = "";
+      document.getElementById("ecTrinkgeld").value = "";
+
+      displayEntries();
+    }
+
+    function displayEntries() {
+      const output = document.getElementById("output");
+      output.innerHTML = "";
+
+      let totalBar = 0, totalEC = 0, totalTrinkgeld = 0, totalECTrinkgeld = 0;
+
+      einnahmen.forEach((entry, index) => {
+        totalBar += entry.summe;
+        totalEC += entry.ecZahlung;
+        totalTrinkgeld += entry.trinkgeld;
+        totalECTrinkgeld += entry.ecTrinkgeld;
+
+        output.innerHTML += `
+          <div class="entry" id="entry-${index}">
+            📅 ${entry.timestamp}<br><hr>
+            💵 Bar-Zahlung: ${entry.summe.toFixed(2)}€<br>
+            💳 EC-Zahlung: ${entry.ecZahlung.toFixed(2)}€<br><hr>
+            🎁 Trinkgeld (Bar): ${entry.trinkgeld.toFixed(2)}€<br>
+            🎁 Trinkgeld (EC): ${entry.ecTrinkgeld.toFixed(2)}€<br>
+            <button class="btn-edit" onclick="editEntry(${index})">✏️ Bearbeiten</button>
+          </div>`;
+      });
+
+      output.innerHTML += `
+        <div class="summary-box">
+          💵 Gesamt Bar: ${totalBar.toFixed(2)}€<br>
+          💳 Gesamt EC : ${totalEC.toFixed(2)}€<br><hr>
+          <center><div class="rahmen">📆 Gesamteinnahmen: ${(totalBar + totalEC).toFixed(2)}€<br><hr>
+          🎁 Gesamt Trinkgeld : ${(totalTrinkgeld + totalECTrinkgeld).toFixed(2)}€</div></center>
+        </div>`;
+    }
+
+    function editEntry(index) {
+      const entry = einnahmen[index];
+      const container = document.getElementById(`entry-${index}`);
+      container.innerHTML = `
+        📅 ${entry.timestamp}<br><hr>
+        <label>Summe (€):</label>
+        <input type="number" id="edit-summe" value="${entry.summe}" oninput="updateRueckgeld(${index})"><br>
+        <label>Gegeben (€):</label>
+        <input type="number" id="edit-gegeben" value="${entry.gegeben}" oninput="updateRueckgeld(${index})"><br>
+        <label>Rückgeld (berechnet):</label>
+        <input type="number" id="edit-rueckgeld" value="${entry.rueckgeld}" readonly><br>
+        <label>Rückgeld (tatsächlich):</label>
+        <input type="number" id="edit-rueckgeldTats" value="${entry.rueckgeldTats}" oninput="updateTrinkgeld(${index})"><br>
+        <label>Trinkgeld (€):</label>
+        <input type="number" id="edit-trinkgeld" value="${entry.trinkgeld}" readonly><br>
+        <label>EC-Zahlung (€):</label>
+        <input type="number" id="edit-ecZahlung" value="${entry.ecZahlung}"><br>
+        <label>Trinkgeld bei EC (€):</label>
+        <input type="number" id="edit-ecTrinkgeld" value="${entry.ecTrinkgeld}"><br>
+        <button class="btn-save" onclick="saveEdit(${index})">💾 Speichern</button>`;
+    }
+
+    function updateRueckgeld(index) {
+      const summe = parseFloat(document.getElementById("edit-summe").value) || 0;
+      const gegeben = parseFloat(document.getElementById("edit-gegeben").value) || 0;
+      const rueckgeld = Math.max(gegeben - summe, 0);
+      document.getElementById("edit-rueckgeld").value = rueckgeld.toFixed(2);
+      updateTrinkgeld(index);
+    }
+
+    function updateTrinkgeld(index) {
+      const rueckgeld = parseFloat(document.getElementById("edit-rueckgeld").value) || 0;
+      const rueckgeldTats = parseFloat(document.getElementById("edit-rueckgeldTats").value) || 0;
+      const trinkgeld = Math.max(rueckgeld - rueckgeldTats, 0);
+      document.getElementById("edit-trinkgeld").value = trinkgeld.toFixed(2);
+    }
+
+    function saveEdit(index) {
+      const summe = parseFloat(document.getElementById("edit-summe").value) || 0;
+      const gegeben = parseFloat(document.getElementById("edit-gegeben").value) || 0;
+      const rueckgeld = parseFloat(document.getElementById("edit-rueckgeld").value) || 0;
+      const rueckgeldTats = parseFloat(document.getElementById("edit-rueckgeldTats").value) || 0;
+      const trinkgeld = parseFloat(document.getElementById("edit-trinkgeld").value) || 0;
+      const ecZahlung = parseFloat(document.getElementById("edit-ecZahlung").value) || 0;
+      const ecTrinkgeld = parseFloat(document.getElementById("edit-ecTrinkgeld").value) || 0;
+      const einnahme = summe + ecZahlung;
+
+      einnahmen[index] = {
+        ...einnahmen[index],
+        summe, gegeben, rueckgeld, rueckgeldTats, trinkgeld, ecZahlung, ecTrinkgeld, einnahme
+      };
+
+      localStorage.setItem("einnahmen", JSON.stringify(einnahmen));
+      displayEntries();
+    }
+
+    function exportPDF() {
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF();
+      const fahrername = localStorage.getItem("fahrername") || "Unbekannt";
+      const erstellungsdatum = new Date().toLocaleDateString("de-DE");
+      pdf.text(`Taxi-Kasse - Fahrer: ${fahrername}`, 10, 10);
+      pdf.text(`Erstellungsdatum: ${erstellungsdatum}`, 10, 20);
+      pdf.autoTable({
+        startY: 30,
+        head: [["Datum", "Summe", "Gegeben", "Rückgeld", "Trinkgeld", "EC", "EC-Trinkgeld", "Einnahmen"]],
+        body: einnahmen.map(e => [
+          e.timestamp,
+          e.summe.toFixed(2),
+          e.gegeben.toFixed(2),
+          e.rueckgeld.toFixed(2),
+          e.trinkgeld.toFixed(2),
+          e.ecZahlung.toFixed(2),
+          e.ecTrinkgeld.toFixed(2),
+          e.einnahme.toFixed(2)
+        ])
+      });
+
+      const totalBar = einnahmen.reduce((a, e) => a + e.summe, 0);
+      const totalEC = einnahmen.reduce((a, e) => a + e.ecZahlung, 0);
+      const totalTrinkgeld = einnahmen.reduce((a, e) => a + e.trinkgeld + e.ecTrinkgeld, 0);
+      const yPos = pdf.lastAutoTable.finalY + 10;
+
+      pdf.setFontSize(12);
+      pdf.text(`Gesamteinnahmen: ${(totalBar + totalEC).toFixed(2)} €`, 10, yPos);
+      pdf.text(`Gesamt-Trinkgeld: ${totalTrinkgeld.toFixed(2)} €`, 10, yPos + 7);
+
+      pdf.save(`Taxikasse-${fahrername}_${erstellungsdatum}.pdf`);
+    }
+
+    function shareWhatsApp() {
+      const totalBar = einnahmen.reduce((a, e) => a + e.summe, 0);
+      const totalEC = einnahmen.reduce((a, e) => a + e.ecZahlung, 0);
+      const totalTrinkgeld = einnahmen.reduce((a, e) => a + e.trinkgeld + e.ecTrinkgeld, 0);
+      const gesamt = (totalBar + totalEC).toFixed(2);
+      const time = new Date().toLocaleString("de-DE");
+      const msg = `📅 ${time}\n📊 Gesamteinnahmen: ${gesamt}€\n💳 EC-Zahlungen: ${totalEC.toFixed(2)}€\n🎁 Trinkgeld: ${totalTrinkgeld.toFixed(2)}€`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+    }
+
+    function resetData() {
+      localStorage.removeItem("einnahmen");
+      einnahmen = [];
+      displayEntries();
+    }
+
+    window.onload = () => {
+      document.getElementById("fahrername").value = localStorage.getItem("fahrername") || "";
+      displayEntries();
+    };
+  </script>
+</body>
+</html>
