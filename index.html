@@ -56,6 +56,7 @@
     .btn-reset { background: #dc3545; color: white; }
     .btn-edit { background: #ffc107; color: black; }
     .btn-save { background: #17a2b8; color: white; }
+    .btn-delete { background: #ff4444; color: white; }
     .entry {
       border: 2px solid #007bff;
       padding: 12px;
@@ -172,6 +173,7 @@
             🎁 Trinkgeld (Bar): ${entry.trinkgeld.toFixed(2)}€<br>
             🎁 Trinkgeld (EC): ${entry.ecTrinkgeld.toFixed(2)}€<br>
             <button class="btn-edit" onclick="editEntry(${index})">✏️ Bearbeiten</button>
+            <button class="btn-delete" onclick="deleteEntry(${index})">🗑️ Löschen</button>
           </div>`;
       });
 
@@ -239,6 +241,14 @@
 
       localStorage.setItem("einnahmen", JSON.stringify(einnahmen));
       displayEntries();
+    }
+
+    function deleteEntry(index) {
+      if (confirm("Eintrag wirklich löschen?")) {
+        einnahmen.splice(index, 1);
+        localStorage.setItem("einnahmen", JSON.stringify(einnahmen));
+        displayEntries();
+      }
     }
 
     function exportPDF() {
